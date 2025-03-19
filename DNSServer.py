@@ -35,14 +35,14 @@ def generate_aes_key(password, salt):
 def encrypt_with_aes(input_string, password, salt):
     key = generate_aes_key(password, salt)
     f = Fernet(key)
-    encrypted_data = f.encrypt(input_string.encode('utf-8'))  # Call the Fernet encrypt method
+    encrypted_data = f.encrypt(input_string.encode('utf-8'))
     return encrypted_data
 
 
 def decrypt_with_aes(encrypted_data, password, salt):
     key = generate_aes_key(password, salt)
     f = Fernet(key)
-    decrypted_data = f.decrypt(encrypted_data)  # Call the Fernet decrypt method
+    decrypted_data = f.decrypt(encrypted_data)
     return decrypted_data.decode('utf-8')
 
 
@@ -58,18 +58,18 @@ dns_records = {
     'example.com.': {
         dns.rdatatype.A: '192.168.1.101',
         dns.rdatatype.AAAA: '2001:0db8:85a3:0000:0000:8a2e:0370:7334',
-        dns.rdatatype.MX: [(10, 'mail.example.com.')],  # List of (preference, mail server) tuples
+        dns.rdatatype.MX: [(10, 'mail.example.com.')],
         dns.rdatatype.CNAME: 'www.example.com.',
         dns.rdatatype.NS: 'ns.example.com.',
         dns.rdatatype.TXT: ('This is a TXT record',),
         dns.rdatatype.SOA: (
-            'ns1.example.com.',  # mname
-            'admin.example.com.',  # rname
-            2023081401,  # serial
-            3600,  # refresh
-            1800,  # retry
-            604800,  # expire
-            86400,  # minimum
+            'ns1.example.com.',
+            'admin.example.com.',
+            2023081401,
+            3600,
+            1800,
+            604800,
+            86400,
         ),
     }
 }
@@ -79,15 +79,15 @@ dns_records = {
 
 def run_dns_server():
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    server_socket.bind(('0.0.0.0', 53))  # Listen on all interfaces, port 53
+    server_socket.bind(('0.0.0.0', 53))
 
     while True:
         try:
-            data, addr = server_socket.recvfrom(1024)  # Receive DNS query
-            request = dns.message.from_wire(data)  # Parse the DNS query
-            response = dns.message.make_response(request)  # Build a DNS response
+            data, addr = server_socket.recvfrom(1024)
+            request = dns.message.from_wire(data)
+            response = dns.message.make_response(request)
 
-            question = request.question[0]  # Extract the first question
+            question = request.question[0]
             qname = question.name.to_text()
             qtype = question.rdtype
 
@@ -114,8 +114,11 @@ def run_dns_server():
                     rrset.add(rdata)
                     response.answer.append(rrset)
 
-            response.flags |= 1 << 10  # Set the "recursion available" flag
-            server_socket.sendto(response.to_wire(), addr)  # Send the response to the client
+            else:
+                print(f"An error occurred: The DNS response does not contain an answer to the question: {qname}. IN {dns.rdatatype.to_text(qtype)}")
+
+            response.flags |= 1 << 10
+            server_socket.sendto(response.to_wire(), addr)
             print("Responded to query:", qname)
 
         except KeyboardInterrupt:
@@ -144,8 +147,8 @@ def run_dns_server_user():
 # --- Main Execution Block ---
 if __name__ == '__main__':
     # Encryption Example:
-    salt = os.urandom(16)  # 16-byte salt
-    password = "securepassword"  # Example password
+    salt = os.urandom(16)
+    password = "securepassword"
     input_string = "Sensitive Information"
 
     encrypted_value = encrypt_with_aes(input_string, password, salt)
