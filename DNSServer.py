@@ -1,7 +1,6 @@
 import dns.message
 import dns.rdatatype
 import dns.rdataclass
-import dns.rdtypes
 from dns.rdtypes.ANY.MX import MX
 from dns.rdtypes.ANY.SOA import SOA
 import dns.rdata
@@ -19,7 +18,6 @@ import base64
 
 
 # --- Encryption Functions ---
-
 def generate_aes_key(password, salt):
     kdf = PBKDF2HMAC(
         algorithm=hashes.SHA256(),
@@ -71,23 +69,31 @@ dns_records = {
             604800,
             86400,
         ),
-    }
+    },
+    'nyu.edu.': {
+        dns.rdatatype.MX: [(10, 'mail.nyu.edu.')],
+        dns.rdatatype.NS: 'ns1.nyu.edu.',
+        dns.rdatatype.AAAA: '2607:f01:e000:66::14',
+    },
+    'safebank.com.': {
+        dns.rdatatype.A: '203.0.113.1',
+        dns.rdatatype.MX: [(5, 'smtp.safebank.com.')],
+    },
 }
 
 
 # --- DNS Server Functions ---
-
 def run_dns_server():
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    server_socket.bind(('0.0.0.0', 53))
+    server_socket.bind(('0.0.0.0', 53))  # Listen on all interfaces, port 53
 
     while True:
         try:
-            data, addr = server_socket.recvfrom(1024)
-            request = dns.message.from_wire(data)
-            response = dns.message.make_response(request)
+            data, addr = server_socket.recvfrom(1024)  # Receive DNS query
+            request = dns.message.from_wire(data)  # Parse the DNS query
+            response = dns.message.make_response(request)  # Build a DNS response
 
-            question = request.question[0]
+            question = request.question[0]  # Extract the first question
             qname = question.name.to_text()
             qtype = question.rdtype
 
@@ -114,12 +120,14 @@ def run_dns_server():
                     rrset.add(rdata)
                     response.answer.append(rrset)
 
+                print(f"Responded to query: {qname}")
             else:
-                print(f"An error occurred: The DNS response does not contain an answer to the question: {qname}. IN {dns.rdatatype.to_text(qtype)}")
+                # If no records found, set the RCODE to 3 (Name Error)
+                response.set_rcode(dns.rcode.NXDOMAIN)
+                print(f"An error occurred: No answer found for {qname} {dns.rdatatype.to_text(qtype)}")
 
-            response.flags |= 1 << 10
-            server_socket.sendto(response.to_wire(), addr)
-            print("Responded to query:", qname)
+            response.flags |= 1 << 10  # Set the "recursion available" flag
+            server_socket.sendto(response.to_wire(), addr)  # Send the response to the client
 
         except KeyboardInterrupt:
             print('\nExiting...')
@@ -147,8 +155,10 @@ def run_dns_server_user():
 # --- Main Execution Block ---
 if __name__ == '__main__':
     # Encryption Example:
-    salt = os.urandom(16)
-    password = "securepassword"
+    salt = os.urandom(16)  # 16-byte salt
+
+    password = "securepassword"  # Example password
+
     input_string = "Sensitive Information"
 
     encrypted_value = encrypt_with_aes(input_string, password, salt)
